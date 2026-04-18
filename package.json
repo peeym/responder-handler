@@ -1,0 +1,31 @@
+{
+  "name": "@peeym/responder-handler",
+  "version": "0.1.0",
+  "description": "Shared form handler: Make.com → Responder + CRM lead-capture. Used by icf-astro, efitzur, storm-eye, scenario, differentiation, tourism, wosh.",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./api": "./src/api/responder.ts",
+    "./client": "./src/lib/client.js",
+    "./registry": "./src/lib/registry.ts"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "echo \"no tests yet\" && exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/peeym/responder-handler.git"
+  },
+  "author": "peeym + efitzur",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {},
+  "peerDependencies": {
+    "@vercel/node": "^3.0.0"
+  }
+}
