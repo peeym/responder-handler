@@ -2,11 +2,24 @@
 
 Shared form handler for every Tzur Hadrachot site. One pattern, three layers, many sources.
 
-**Layer 1 →** Make.com webhook → Responder mailing list (by `list_id`)
+**Layer 1 →** Make.com webhook → **mailing provider** (Responder today; Smoove / ActiveTrail / MailerLite tomorrow) — routed by `provider` + `external_list_id`
 **Layer 2 →** CRM `/api/lead-capture` (crm.efitzur.co.il) → contact + website_lead row
 **Layer 3 →** Resend email notification (only if the list has `notify: true`)
 
 All three layers fire in parallel, non-blocking. If any layer fails, the others still succeed.
+
+## Provider-agnostic by design
+
+**Responder (Rav Mesar) is the initial mailing provider. The architecture is built to be swapped.**
+
+Every list in the registry declares its `provider` + `external_list_id`. When migrating a list to a new service:
+
+1. Open the list in the new provider's UI, grab its ID.
+2. Change the entry's `provider` + `external_list_id` in [`src/lib/registry.ts`](./src/lib/registry.ts).
+3. Add a matching route in Make.com's scenario (branch on `provider`).
+4. Commit, push. Next deploy of any consumer site picks it up — **no site code touched**.
+
+The package name (`responder-handler`) is historical. Think of it as `mailing-handler`.
 
 ## Consumers
 
@@ -74,14 +87,26 @@ Optional attrs:
 
 ## Registry
 
-`src/lib/registry.ts` — single source of truth for every Responder list.
+`src/lib/registry.ts` — single source of truth for every mailing list across every site.
+
 Adding a new list:
-1. Open the list in Responder, grab the numeric ID.
-2. Add an entry to `LISTS`:
+1. Open the list in the provider's UI (Responder / Smoove / ...), grab the ID.
+2. Add an entry to `MAILING_LISTS`:
    ```ts
-   'NEW_ID': { name: '...', source_site: 'stormeye', form_name: 'slug', notify_email: '...', notify: true, crm_tags: ['lead'] },
+   'NEW_ID': {
+     name: '...',
+     provider: 'responder',
+     external_list_id: 'NEW_ID',
+     source_site: 'stormeye',
+     form_name: 'slug',
+     notify_email: '...',
+     notify: true,
+     crm_tags: ['lead'],
+   },
    ```
 3. Commit, push. Next deploy of any consumer site picks it up.
+
+> `LISTS` and `ListConfig` remain exported as deprecated aliases for `MAILING_LISTS` and `MailingListConfig` so pre-v0.2 callers keep working.
 
 ## Collaboration
 

@@ -1,20 +1,26 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { resolveList, type ListConfig } from '../lib/registry.js';
+import { resolveList, type MailingListConfig, type ListConfig } from '../lib/registry.js';
 
 /**
- * Shared responder handler — used by every site (icf, efitzur, stormeye, scenario, etc).
+ * Shared form handler — used by every site (icf, efitzur, stormeye, scenario, etc).
  *
  * 3 layers, all parallel non-blocking:
- *   1. Make.com webhook → Responder mailing list (by list_id)
+ *   1. Mailing provider (via Make.com webhook) → Responder / Smoove / ActiveTrail / ...
  *   2. CRM /api/lead-capture → contact + website_lead row
- *   3. Resend email notification (only if list.notify === true)
+ *   3. Resend email notification (only if the list has notify === true)
+ *
+ * ──────────────────────────────────────────────────────────────
+ * PROVIDER-AGNOSTIC BY DESIGN — Responder is the initial provider.
+ * Layer 1 dispatches based on `list.provider`. When migrating a list to a
+ * different mailing service, change `provider` + `external_list_id` in the
+ * registry and add a matching route in Make.com — no site code touched.
+ * ──────────────────────────────────────────────────────────────
  *
  * Env vars (per Vercel project):
- *   MAKE_WEBHOOK_URL    — required; shared across all sites
+ *   MAKE_WEBHOOK_URL    — required; shared across all sites (Make.com routes by provider + external_list_id)
  *   CRM_LEAD_ENDPOINT   — https://crm.efitzur.co.il/api/lead-capture
  *   CRM_LEAD_TOKEN      — shared secret, sent as x-crm-token header
  *   RESEND_API_KEY      — only on sites that have any list with notify=true
- *   ALLOWED_ORIGINS     — comma-separated; if absent, defaults to production + localhost
  */
 
 export interface ResponderHandlerOptions {
@@ -34,9 +40,16 @@ function buildCorsOrigin(req: VercelRequest, allowed: string[]): string {
   return allowed[0] || '*';
 }
 
-function mapLayer1Payload(data: Record<string, string>, listId: string, page: string) {
+/**
+ * Layer 1 payload — sent to Make.com which routes to the correct mailing provider
+ * by looking at `provider` + `external_list_id`. `list_id` is kept for backward
+ * compatibility with the existing icf Make.com scenario until it's updated.
+ */
+function buildProviderPayload(data: Record<string, string>, list: MailingListConfig, page: string) {
   return {
-    list_id: listId,
+    provider: list.provider,
+    external_list_id: list.external_list_id,
+    list_id: list.external_list_id, // backward compat — remove after Make.com scenario reads external_list_id
     name: data.name,
     email: data.email,
     phone: data.phone,
@@ -52,7 +65,7 @@ function mapLayer1Payload(data: Record<string, string>, listId: string, page: st
   };
 }
 
-function mapLayer2Payload(data: Record<string, string>, list: ListConfig, page: string) {
+function buildCrmPayload(data: Record<string, string>, list: MailingListConfig, page: string) {
   // Stuff non-schema fields (company, participants) into `message` so nothing is lost.
   const extras: string[] = [];
   if (data.company) extras.push(`ארגון: ${data.company}`);
@@ -75,6 +88,43 @@ function mapLayer2Payload(data: Record<string, string>, list: ListConfig, page: 
     referrer_url: data.ref || null,
     message: extras.length ? extras.join('\n') : null,
   };
+}
+
+/**
+ * Dispatch a lead to the list's mailing provider. Returns true on success.
+ * Today all providers funnel through the single Make.com webhook, which does the
+ * per-provider branching inside the scenario. Adding a direct-API path for a new
+ * provider is a matter of adding a branch here.
+ */
+async function dispatchToMailingProvider(list: MailingListConfig, data: Record<string, string>, page: string): Promise<boolean> {
+  const webhookUrl = process.env.MAKE_WEBHOOK_URL;
+  if (!webhookUrl) return false;
+
+  switch (list.provider) {
+    case 'responder':
+    case 'smoove':
+    case 'activetrail':
+    case 'mailerlite':
+      // Route via Make.com — the scenario branches on `provider`.
+      try {
+        const r = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(buildProviderPayload(data, list, page)),
+          signal: AbortSignal.timeout(10000),
+        });
+        return r.ok;
+      } catch {
+        return false;
+      }
+
+    default: {
+      // Exhaustiveness guard — lights up if a new provider is added to the union but not handled here.
+      const _exhaustive: never = list.provider;
+      void _exhaustive;
+      return false;
+    }
+  }
 }
 
 export function createResponderHandler(options: ResponderHandlerOptions = {}) {
@@ -113,18 +163,10 @@ export function createResponderHandler(options: ResponderHandlerOptions = {}) {
     const list = resolveList(listId);
 
     // --- Kick off all 3 layers in parallel, wait for all to settle ---
-    const webhookUrl = process.env.MAKE_WEBHOOK_URL;
     const crmUrl = process.env.CRM_LEAD_ENDPOINT || 'https://crm.efitzur.co.il/api/lead-capture';
     const crmToken = process.env.CRM_LEAD_TOKEN;
 
-    const layer1 = webhookUrl
-      ? fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(mapLayer1Payload(data, listId, page)),
-          signal: AbortSignal.timeout(10000),
-        }).then(r => r.ok).catch(() => false)
-      : Promise.resolve(false);
+    const layer1 = dispatchToMailingProvider(list, data, page);
 
     const layer2 = fetch(crmUrl, {
       method: 'POST',
@@ -134,7 +176,7 @@ export function createResponderHandler(options: ResponderHandlerOptions = {}) {
         // Pass origin so CRM's CORS check sees the site, not the Vercel function.
         'origin': corsOrigin,
       },
-      body: JSON.stringify(mapLayer2Payload(data, list, page)),
+      body: JSON.stringify(buildCrmPayload(data, list, page)),
       signal: AbortSignal.timeout(10000),
     }).then(r => r.ok).catch(() => false);
 
@@ -149,13 +191,14 @@ export function createResponderHandler(options: ResponderHandlerOptions = {}) {
         })
       : Promise.resolve(false);
 
-    const [responderOk, crmOk, emailOk] = await Promise.all([layer1, layer2, layer3]);
+    const [mailingOk, crmOk, emailOk] = await Promise.all([layer1, layer2, layer3]);
 
-    console.log(`[lead] site=${list.source_site} list=${listId} (${list.name}) email=${data.email || '—'} phone=${data.phone || '—'} responder=${responderOk} crm=${crmOk} email=${emailOk}`);
+    console.log(`[lead] site=${list.source_site} list=${listId} provider=${list.provider} external_id=${list.external_list_id} (${list.name}) email=${data.email || '—'} phone=${data.phone || '—'} mailing=${mailingOk} crm=${crmOk} email=${emailOk}`);
 
     // UX = success unless ALL three layers failed.
-    const ok = responderOk || crmOk || emailOk;
-    return res.json({ ok, responder: responderOk, crm: crmOk, email: emailOk });
+    const ok = mailingOk || crmOk || emailOk;
+    // Response keeps `responder` key as alias for `mailing` to avoid breaking existing client code.
+    return res.json({ ok, mailing: mailingOk, responder: mailingOk, crm: crmOk, email: emailOk });
   };
 }
 

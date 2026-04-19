@@ -1,7 +1,7 @@
 {
   "name": "@peeym/responder-handler",
-  "version": "0.1.0",
-  "description": "Shared form handler: Make.com → Responder + CRM lead-capture. Used by icf-astro, efitzur, storm-eye, scenario, differentiation, tourism, wosh.",
+  "version": "0.2.0",
+  "description": "Shared form handler: Make.com → (Responder / Smoove / ActiveTrail / ...) + CRM lead-capture. Provider-agnostic mailing layer. Used by icf-astro, efitzur, storm-eye, scenario, differentiation, tourism, wosh.",
   "type": "module",
   "main": "src/index.ts",
   "exports": {
