@@ -72,6 +72,14 @@ function buildCrmPayload(data: Record<string, string>, list: MailingListConfig, 
   if (data.participants) extras.push(`משתתפים: ${data.participants}`);
   if (data.message) extras.push(data.message);
 
+  // Merge registry-defined tags with any caller-supplied test tags
+  // (forms can append `tags=test,foo` for QA without touching the registry).
+  const callerTags = (data.tags || '')
+    .split(',')
+    .map(t => t.trim())
+    .filter(Boolean);
+  const tags = Array.from(new Set([...(list.crm_tags || []), ...callerTags]));
+
   return {
     name: data.name || null,
     email: data.email || null,
@@ -87,6 +95,7 @@ function buildCrmPayload(data: Record<string, string>, list: MailingListConfig, 
     landing_url: page || null,
     referrer_url: data.ref || null,
     message: extras.length ? extras.join('\n') : null,
+    tags: tags.length ? tags : undefined,
   };
 }
 
@@ -143,7 +152,7 @@ export function createResponderHandler(options: ResponderHandlerOptions = {}) {
     if (!data.list_id) return res.status(400).json({ ok: false, error: 'Missing list_id' });
 
     const listId = String(data.list_id);
-    for (const k of ['name','email','phone','company','participants','utm_source','utm_medium','utm_campaign','utm_term','utm_content','ref','message']) {
+    for (const k of ['name','email','phone','company','participants','utm_source','utm_medium','utm_campaign','utm_term','utm_content','ref','message','tags']) {
       data[k] = (data[k] || '').trim();
     }
     const page = (req.headers.referer as string | undefined) || '';

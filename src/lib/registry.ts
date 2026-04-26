@@ -63,31 +63,30 @@ export const MAILING_LISTS: Record<string, MailingListConfig> = {
   '56384': { name: 'נרשמים לקורס — בלי לחץ (footer)', provider: 'responder', external_list_id: '56384', source_site: 'icf', form_name: 'no-stress-course', salesperson: null,   notify_email: 'zurelad@gmail.com', notify: false, crm_tags: ['course-leads', 'no-stress'] },
   '94930': { name: 'הרצאות אלעד',                   provider: 'responder', external_list_id: '94930', source_site: 'icf', form_name: 'lecture-inquiry',  salesperson: 'tzur', notify_email: 'tzur@icf.co.il',    notify: true,  crm_tags: ['lecture-inquiry'] },
 
-  // --- Placeholders for new lists (Phase 3) ---
-  // Replace the fake keys with real provider-side IDs after opening them in the provider UI.
-  // (provider defaults to 'responder' for the initial rollout — change in-place if migrating.)
-  //
-  // efitzur:
-  // 'EFI_NEWS_ID':    { name: 'ניוזלטר אפרת צור',       provider: 'responder', external_list_id: 'EFI_NEWS_ID',    source_site: 'efitzur',        form_name: 'newsletter',       notify_email: 'efrat@efitzur.co.il', notify: false, crm_tags: ['newsletter', 'efitzur'] },
-  // 'EFI_LEADS_ID':   { name: 'לידים אפרת צור',         provider: 'responder', external_list_id: 'EFI_LEADS_ID',   source_site: 'efitzur',        form_name: 'counseling-lead',  notify_email: 'efrat@efitzur.co.il', notify: true,  crm_tags: ['lead', 'counseling'] },
-  // 'EFI_LECT_ID':    { name: 'הרצאות אפרת',             provider: 'responder', external_list_id: 'EFI_LECT_ID',    source_site: 'efitzur',        form_name: 'lecture-inquiry',  notify_email: 'efrat@efitzur.co.il', notify: true,  crm_tags: ['lecture-inquiry'] },
-  //
-  // stormeye:
-  // 'SE_LEADS_ID':    { name: 'לידים עין הסערה',         provider: 'responder', external_list_id: 'SE_LEADS_ID',    source_site: 'stormeye',       form_name: 'storm-eye-lead',   notify_email: 'tzur@icf.co.il',      notify: true,  crm_tags: ['lead', 'stormeye'] },
-  // 'SE_EXPOSURE_ID': { name: 'ערבי חשיפה',              provider: 'responder', external_list_id: 'SE_EXPOSURE_ID', source_site: 'stormeye',       form_name: 'exposure-evening', notify_email: 'tzur@icf.co.il',      notify: true,  crm_tags: ['event-registration', 'exposure'] },
-  //
-  // scenario:
-  // 'SC_NEWS_ID':     { name: 'ניוזלטר תרחיש',           provider: 'responder', external_list_id: 'SC_NEWS_ID',     source_site: 'scenario',       form_name: 'newsletter',       notify_email: 'tzur@icf.co.il',      notify: false, crm_tags: ['newsletter', 'scenario'] },
-  // 'SC_HAR_ID':      { name: 'לידים הר הביטוח',         provider: 'responder', external_list_id: 'SC_HAR_ID',      source_site: 'scenario',       form_name: 'har-habituach',    product_slug: 'har-habituach', notify_email: 'tzur@icf.co.il', notify: true, crm_tags: ['lead', 'insurance', 'har-habituach'] },
-  // 'SC_MASL_ID':     { name: 'לידים מסלקה',             provider: 'responder', external_list_id: 'SC_MASL_ID',     source_site: 'scenario',       form_name: 'maslaka',          product_slug: 'maslaka',       notify_email: 'tzur@icf.co.il', notify: true, crm_tags: ['lead', 'insurance', 'maslaka'] },
-  // 'SC_CONT_ID':     { name: 'יצירת קשר תרחיש',         provider: 'responder', external_list_id: 'SC_CONT_ID',     source_site: 'scenario',       form_name: 'scenario-contact', notify_email: 'tzur@icf.co.il',      notify: true,  crm_tags: ['lead', 'contact', 'scenario'] },
-  //
-  // differentiation:
-  // 'DIFF_LEADS_ID':  { name: 'לידים דיפרנציאציה',       provider: 'responder', external_list_id: 'DIFF_LEADS_ID',  source_site: 'differentiation', form_name: 'differentiation-lead', notify_email: 'tzur@icf.co.il',  notify: true,  crm_tags: ['lead', 'differentiation'] },
-  // 'DIFF_NEWS_ID':   { name: 'ניוזלטר דיפרנציאציה',     provider: 'responder', external_list_id: 'DIFF_NEWS_ID',   source_site: 'differentiation', form_name: 'newsletter',       notify_email: 'tzur@icf.co.il',      notify: false, crm_tags: ['newsletter', 'differentiation'] },
-  //
-  // tourism:
-  // 'TOUR_LEADS_ID':  { name: 'לידים תיירות',            provider: 'responder', external_list_id: 'TOUR_LEADS_ID',  source_site: 'tourism',        form_name: 'tourism-contact',  notify_email: 'tzur@icf.co.il',      notify: true,  crm_tags: ['lead', 'tourism'] },
+  // --- efitzur.co.il (Phase 3) ---
+  'efitzur-newsletter':     { name: 'ניוזלטר אפרת צור (תפוצה כללית אפרת)', provider: 'responder', external_list_id: '2154',  source_site: 'efitzur',        form_name: 'newsletter',       salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: false, crm_tags: ['newsletter', 'efitzur'] },
+  'efitzur-counseling':     { name: 'לידים לייעוץ אפרת',                   provider: 'responder', external_list_id: '4010',  source_site: 'efitzur',        form_name: 'counseling-lead',  salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: true,  crm_tags: ['lead', 'counseling', 'efitzur'] },
+  'efitzur-lectures':       { name: 'הרצאות אפרת',                          provider: 'responder', external_list_id: '98479', source_site: 'efitzur',        form_name: 'lecture-inquiry',  salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: true,  crm_tags: ['lecture-inquiry', 'efitzur'] },
+
+  // --- storm-eye.co.il (Phase 3) ---
+  'stormeye-general':       { name: 'לידים עין הסערה (רשימה ארצית)',       provider: 'responder', external_list_id: '79220', source_site: 'stormeye',       form_name: 'storm-eye-lead',   salesperson: 'tzur',  notify_email: 'tzur@icf.co.il',      notify: true,  crm_tags: ['lead', 'stormeye'] },
+  'stormeye-exposure':      { name: 'ערבי חשיפה עין הסערה',                provider: 'responder', external_list_id: '87346', source_site: 'stormeye',       form_name: 'exposure-evening', salesperson: 'tzur',  notify_email: 'tzur@icf.co.il',      notify: true,  crm_tags: ['event-registration', 'exposure', 'stormeye'] },
+
+  // --- scenario-insurance.co.il (Phase 3) ---
+  // NOTE: All 4 forms route to external_list_id 6208 (תפוצה פיננסים, shared with ICF).
+  // CRM-side tagging keeps them distinguishable. Will split when migrating to Smoove.
+  'scenario-newsletter':    { name: 'ניוזלטר תרחיש',                       provider: 'responder', external_list_id: '6208',  source_site: 'scenario',       form_name: 'newsletter',       salesperson: 'tzur',  notify_email: 'tzur@icf.co.il',      notify: false, crm_tags: ['newsletter', 'scenario'] },
+  'scenario-har-habituach': { name: 'לידים הר הביטוח (תרחיש)',             provider: 'responder', external_list_id: '6208',  source_site: 'scenario',       form_name: 'har-habituach',    product_slug: 'har-habituach', salesperson: 'tzur', notify_email: 'tzur@icf.co.il', notify: true,  crm_tags: ['lead', 'scenario', 'har-habituach'] },
+  'scenario-maslaka':       { name: 'לידים מסלקה (תרחיש)',                 provider: 'responder', external_list_id: '6208',  source_site: 'scenario',       form_name: 'maslaka',          product_slug: 'maslaka',       salesperson: 'tzur', notify_email: 'tzur@icf.co.il', notify: true,  crm_tags: ['lead', 'scenario', 'maslaka'] },
+  'scenario-contact':       { name: 'יצירת קשר תרחיש',                     provider: 'responder', external_list_id: '6208',  source_site: 'scenario',       form_name: 'scenario-contact', salesperson: 'tzur',  notify_email: 'tzur@icf.co.il',      notify: true,  crm_tags: ['lead', 'scenario', 'contact'] },
+
+  // --- differentiation.co.il (Phase 3) ---
+  // NOTE: Both forms route to external_list_id 98480 (מובחנות).
+  'differentiation-leads':      { name: 'לידים דיפרנציאציה',               provider: 'responder', external_list_id: '98480', source_site: 'differentiation', form_name: 'differentiation-lead', salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: true,  crm_tags: ['lead', 'differentiation'] },
+  'differentiation-newsletter': { name: 'ניוזלטר דיפרנציאציה',             provider: 'responder', external_list_id: '98480', source_site: 'differentiation', form_name: 'newsletter',           salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: false, crm_tags: ['newsletter', 'differentiation'] },
+
+  // --- tourism (Phase 3) ---
+  'tourism-contact':        { name: 'לידים תיירות — Israel Tour (EN)',     provider: 'responder', external_list_id: '98481', source_site: 'tourism',        form_name: 'tourism-contact',  salesperson: 'tzur',  notify_email: 'tzur@icf.co.il',      notify: true,  crm_tags: ['lead', 'tourism'] },
 };
 
 /**
