@@ -142,6 +142,117 @@ async function dispatchToMailingProvider(list: MailingListConfig, data: Record<s
   }
 }
 
+/**
+ * Framework-agnostic lead dispatcher.
+ *
+ * Use this when calling from Astro APIRoute, Cloudflare Worker, Edge Function,
+ * or any context where Vercel's req/res signatures don't apply. Returns plain
+ * data; you build the HTTP response in the consumer.
+ *
+ * The Vercel-specific `createResponderHandler` wraps this internally.
+ */
+export interface DispatchLeadInput {
+  list_id: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  participants?: string;
+  message?: string;
+  tags?: string;
+  /** Override registry form_name for CRM source tracking. */
+  form_name?: string;
+  /** Override registry product_slug for CRM deal attribution. */
+  product_slug?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_term?: string;
+  utm_content?: string;
+  ref?: string;
+  /** Caller's referer header (the page URL where the form was submitted). */
+  page?: string;
+}
+
+export interface DispatchLeadOptions {
+  /** Override the From: address on the Resend notification email. */
+  emailFrom?: string;
+  /** Origin to forward to the CRM (so its CORS gate sees the real site). */
+  originForCrm?: string;
+}
+
+export interface DispatchLeadResult {
+  ok: boolean;
+  mailing: boolean;
+  crm: boolean;
+  email: boolean;
+  /** Hebrew error string for known input-validation failures. */
+  validationError?: string;
+}
+
+export async function dispatchLead(
+  input: DispatchLeadInput,
+  options: DispatchLeadOptions = {},
+): Promise<DispatchLeadResult> {
+  if (!input.list_id) {
+    return { ok: false, mailing: false, crm: false, email: false, validationError: 'Missing list_id' };
+  }
+  if (!input.email && !input.phone) {
+    return { ok: false, mailing: false, crm: false, email: false, validationError: 'חובה להשאיר אימייל או טלפון' };
+  }
+  if (input.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
+    return { ok: false, mailing: false, crm: false, email: false, validationError: 'כתובת אימייל לא תקינה' };
+  }
+
+  // Trim every string field — registry/CRM expect clean data.
+  const data: Record<string, string> = {};
+  for (const [k, v] of Object.entries(input)) {
+    if (typeof v === 'string') data[k] = v.trim();
+  }
+  const page = data.page || '';
+
+  const list = resolveList(String(input.list_id));
+
+  const crmUrl = process.env.CRM_LEAD_ENDPOINT || 'https://crm.efitzur.co.il/api/lead-capture';
+  const crmToken = process.env.CRM_LEAD_TOKEN;
+  const corsOrigin = options.originForCrm || page;
+
+  const layer1 = dispatchToMailingProvider(list, data, page);
+
+  const layer2 = fetch(crmUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(crmToken ? { 'x-crm-token': crmToken } : {}),
+      ...(corsOrigin ? { origin: corsOrigin } : {}),
+    },
+    body: JSON.stringify(buildCrmPayload(data, list, page)),
+    signal: AbortSignal.timeout(10000),
+  }).then((r: Response) => r.ok).catch(() => false);
+
+  const layer3 = list.notify && process.env.RESEND_API_KEY
+    ? sendNotifyEmail({
+        apiKey: process.env.RESEND_API_KEY,
+        from: options.emailFrom || 'Website <noreply@efitzur.co.il>',
+        to: list.notify_email,
+        list,
+        data,
+        page,
+      })
+    : Promise.resolve(false);
+
+  const [mailingOk, crmOk, emailOk] = await Promise.all([layer1, layer2, layer3]);
+
+  console.log(`[lead] site=${list.source_site} list=${input.list_id} provider=${list.provider} external_id=${list.external_list_id} (${list.name}) email=${data.email || '—'} phone=${data.phone || '—'} mailing=${mailingOk} crm=${crmOk} email=${emailOk}`);
+
+  return {
+    ok: mailingOk || crmOk || emailOk,
+    mailing: mailingOk,
+    crm: crmOk,
+    email: emailOk,
+  };
+}
+
 export function createResponderHandler(options: ResponderHandlerOptions = {}) {
   const allowedOrigins = options.allowedOrigins ?? [];
 
