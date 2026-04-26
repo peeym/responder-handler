@@ -1,20 +1,36 @@
 {
   "name": "@peeym/responder-handler",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Shared form handler: Make.com → (Responder / Smoove / ActiveTrail / ...) + CRM lead-capture. Provider-agnostic mailing layer. Used by icf-astro, efitzur, storm-eye, scenario, differentiation, tourism, wosh.",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./api": "./src/api/responder.ts",
-    "./client": "./src/lib/client.js",
-    "./registry": "./src/lib/registry.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./api": {
+      "types": "./dist/api/responder.d.ts",
+      "default": "./dist/api/responder.js"
+    },
+    "./client": {
+      "types": "./dist/lib/client.d.ts",
+      "default": "./dist/lib/client.js"
+    },
+    "./registry": {
+      "types": "./dist/lib/registry.d.ts",
+      "default": "./dist/lib/registry.js"
+    }
   },
   "files": [
+    "dist",
     "src",
     "README.md"
   ],
   "scripts": {
+    "build": "tsc",
+    "prepare": "tsc",
     "test": "echo \"no tests yet\" && exit 0"
   },
   "repository": {
@@ -27,5 +43,10 @@
   "dependencies": {},
   "peerDependencies": {
     "@vercel/node": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@vercel/node": "^3.0.0",
+    "typescript": "^5.6.0"
   }
 }

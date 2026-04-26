@@ -193,7 +193,7 @@ export function createResponderHandler(options: ResponderHandlerOptions = {}) {
       },
       body: JSON.stringify(buildCrmPayload(data, list, page)),
       signal: AbortSignal.timeout(10000),
-    }).then(r => r.ok).catch(() => false);
+    }).then((r: Response) => r.ok).catch(() => false);
 
     const layer3 = list.notify && process.env.RESEND_API_KEY
       ? sendNotifyEmail({
