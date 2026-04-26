@@ -80,13 +80,19 @@ function buildCrmPayload(data: Record<string, string>, list: MailingListConfig, 
     .filter(Boolean);
   const tags = Array.from(new Set([...(list.crm_tags || []), ...callerTags]));
 
+  // Caller-supplied form_name / product_slug override the registry default.
+  // Used by landing pages that share a list but want CRM to track them as a
+  // distinct funnel (e.g. course-cheshek vs counseling — both list 4010).
+  const formName = data.form_name || list.form_name;
+  const productSlug = data.product_slug || list.product_slug || null;
+
   return {
     name: data.name || null,
     email: data.email || null,
     phone: data.phone || null,
     source_site: list.source_site,
-    form_name: list.form_name,
-    product_slug: list.product_slug ?? null,
+    form_name: formName,
+    product_slug: productSlug,
     utm_source: data.utm_source || null,
     utm_medium: data.utm_medium || null,
     utm_campaign: data.utm_campaign || null,
@@ -152,7 +158,7 @@ export function createResponderHandler(options: ResponderHandlerOptions = {}) {
     if (!data.list_id) return res.status(400).json({ ok: false, error: 'Missing list_id' });
 
     const listId = String(data.list_id);
-    for (const k of ['name','email','phone','company','participants','utm_source','utm_medium','utm_campaign','utm_term','utm_content','ref','message','tags']) {
+    for (const k of ['name','email','phone','company','participants','utm_source','utm_medium','utm_campaign','utm_term','utm_content','ref','message','tags','form_name','product_slug']) {
       data[k] = (data[k] || '').trim();
     }
     const page = (req.headers.referer as string | undefined) || '';
