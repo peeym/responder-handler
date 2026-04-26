@@ -65,12 +65,12 @@ export const MAILING_LISTS: Record<string, MailingListConfig> = {
 
   // --- efitzur.co.il (Phase 3) ---
   'efitzur-newsletter':     { name: 'ניוזלטר אפרת צור (תפוצה כללית אפרת)', provider: 'responder', external_list_id: '2154',  source_site: 'efitzur',        form_name: 'newsletter',       salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: false, crm_tags: ['newsletter', 'efitzur'] },
-  'efitzur-counseling':     { name: 'לידים לייעוץ אפרת',                   provider: 'responder', external_list_id: '4010',  source_site: 'efitzur',        form_name: 'counseling-lead',  salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: true,  crm_tags: ['lead', 'counseling', 'efitzur'] },
-  'efitzur-lectures':       { name: 'הרצאות אפרת',                          provider: 'responder', external_list_id: '98479', source_site: 'efitzur',        form_name: 'lecture-inquiry',  salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: true,  crm_tags: ['lecture-inquiry', 'efitzur'] },
+  'efitzur-counseling':     { name: 'לידים לייעוץ אפרת',                   provider: 'responder', external_list_id: '4010',  source_site: 'efitzur',        form_name: 'counseling-lead',  product_slug: 'efitzur-counseling', salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: true,  crm_tags: ['lead', 'counseling', 'efitzur'] },
+  'efitzur-lectures':       { name: 'הרצאות אפרת',                          provider: 'responder', external_list_id: '98479', source_site: 'efitzur',        form_name: 'lecture-inquiry',  product_slug: 'efitzur-lectures',   salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: true,  crm_tags: ['lecture-inquiry', 'efitzur'] },
 
   // --- storm-eye.co.il (Phase 3) ---
-  'stormeye-general':       { name: 'לידים עין הסערה (רשימה ארצית)',       provider: 'responder', external_list_id: '79220', source_site: 'stormeye',       form_name: 'storm-eye-lead',   salesperson: 'tzur',  notify_email: 'tzur@icf.co.il',      notify: true,  crm_tags: ['lead', 'stormeye'] },
-  'stormeye-exposure':      { name: 'ערבי חשיפה עין הסערה',                provider: 'responder', external_list_id: '87346', source_site: 'stormeye',       form_name: 'exposure-evening', salesperson: 'tzur',  notify_email: 'tzur@icf.co.il',      notify: true,  crm_tags: ['event-registration', 'exposure', 'stormeye'] },
+  'stormeye-general':       { name: 'לידים עין הסערה (רשימה ארצית)',       provider: 'responder', external_list_id: '79220', source_site: 'stormeye',       form_name: 'storm-eye-lead',   product_slug: 'storm-eye-workshop',         salesperson: 'tzur', notify_email: 'tzur@icf.co.il', notify: true, crm_tags: ['lead', 'stormeye'] },
+  'stormeye-exposure':      { name: 'ערבי חשיפה עין הסערה',                provider: 'responder', external_list_id: '87346', source_site: 'stormeye',       form_name: 'exposure-evening', product_slug: 'storm-eye-exposure-evening', salesperson: 'tzur', notify_email: 'tzur@icf.co.il', notify: true, crm_tags: ['event-registration', 'exposure', 'stormeye'] },
 
   // --- scenario-insurance.co.il (Phase 3) ---
   // NOTE: All 4 forms route to external_list_id 6208 (תפוצה פיננסים, shared with ICF).
@@ -86,7 +86,7 @@ export const MAILING_LISTS: Record<string, MailingListConfig> = {
   'differentiation-newsletter': { name: 'ניוזלטר דיפרנציאציה',             provider: 'responder', external_list_id: '98480', source_site: 'differentiation', form_name: 'newsletter',           salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: false, crm_tags: ['newsletter', 'differentiation'] },
 
   // --- tourism (Phase 3) ---
-  'tourism-contact':        { name: 'לידים תיירות — Israel Tour (EN)',     provider: 'responder', external_list_id: '98481', source_site: 'tourism',        form_name: 'tourism-contact',  salesperson: 'tzur',  notify_email: 'tzur@icf.co.il',      notify: true,  crm_tags: ['lead', 'tourism'] },
+  'tourism-contact':        { name: 'לידים תיירות — Israel Tour (EN)',     provider: 'responder', external_list_id: '98481', source_site: 'tourism',        form_name: 'tourism-contact',  product_slug: 'israel-tour', salesperson: 'tzur',  notify_email: 'tzur@icf.co.il',      notify: true,  crm_tags: ['lead', 'tourism'] },
 };
 
 /**
