@@ -53,6 +53,12 @@ function buildProviderPayload(data: Record<string, string>, list: MailingListCon
     name: data.name,
     email: data.email,
     phone: data.phone,
+    // `city` and `interested_in` are custom fields on the Rav-Messer lists.
+    // This payload is a CLOSED field list: anything not named here is cut here,
+    // before Make.com ever sees it. Adding a form field is therefore two steps —
+    // the form, and this line.
+    city: data.city,
+    interested_in: data.interested_in,
     company: data.company,
     participants: data.participants,
     utm_source: data.utm_source,
@@ -66,8 +72,9 @@ function buildProviderPayload(data: Record<string, string>, list: MailingListCon
 }
 
 function buildCrmPayload(data: Record<string, string>, list: MailingListConfig, page: string) {
-  // Stuff non-schema fields (company, participants) into `message` so nothing is lost.
+  // Stuff non-schema fields (city, company, participants) into `message` so nothing is lost.
   const extras: string[] = [];
+  if (data.city) extras.push(`עיר/אזור: ${data.city}`);
   if (data.company) extras.push(`ארגון: ${data.company}`);
   if (data.participants) extras.push(`משתתפים: ${data.participants}`);
   if (data.message) extras.push(data.message);
@@ -156,6 +163,10 @@ export interface DispatchLeadInput {
   name?: string;
   email?: string;
   phone?: string;
+  /** City / region. Custom field on the Rav-Messer lists; also appended to the CRM message. */
+  city?: string;
+  /** What the lead asked about. Custom field on the Rav-Messer lists. */
+  interested_in?: string;
   company?: string;
   participants?: string;
   message?: string;
@@ -269,7 +280,7 @@ export function createResponderHandler(options: ResponderHandlerOptions = {}) {
     if (!data.list_id) return res.status(400).json({ ok: false, error: 'Missing list_id' });
 
     const listId = String(data.list_id);
-    for (const k of ['name','email','phone','company','participants','utm_source','utm_medium','utm_campaign','utm_term','utm_content','ref','message','tags','form_name','product_slug']) {
+    for (const k of ['name','email','phone','city','interested_in','company','participants','utm_source','utm_medium','utm_campaign','utm_term','utm_content','ref','message','tags','form_name','product_slug']) {
       data[k] = (data[k] || '').trim();
     }
     const page = (req.headers.referer as string | undefined) || '';
@@ -345,6 +356,7 @@ async function sendNotifyEmail(args: {
     data.name ? `שם: ${data.name}` : '',
     data.email ? `אימייל: ${data.email}` : '',
     data.phone ? `טלפון: ${data.phone}` : '',
+    data.city ? `עיר/אזור: ${data.city}` : '',
     data.company ? `ארגון: ${data.company}` : '',
     data.participants ? `משתתפים: ${data.participants}` : '',
     data.message ? `הודעה: ${data.message}` : '',
