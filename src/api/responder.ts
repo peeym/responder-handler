@@ -1,11 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { resolveList, type MailingListConfig, type ListConfig } from '../lib/registry.js';
+import { resolveList, isRegisteredList, type MailingListConfig, type ListConfig } from '../lib/registry.js';
+import { addSubscriberDirect, hasRavMesserCredentials } from '../lib/ravmesser.js';
 
 /**
  * Shared form handler — used by every site (icf, efitzur, stormeye, scenario, etc).
  *
  * 3 layers, all parallel non-blocking:
- *   1. Mailing provider (via Make.com webhook) → Responder / Smoove / ActiveTrail / ...
+ *   1. Mailing provider → Rav Messer directly (V2 API) when the site has the
+ *      RESPONDER_* credentials, with Make.com as the backup; otherwise Make.com
+ *      as before. See src/lib/ravmesser.ts.
  *   2. CRM /api/lead-capture → contact + website_lead row
  *   3. Resend email notification (only if the list has notify === true)
  *
@@ -17,7 +20,9 @@ import { resolveList, type MailingListConfig, type ListConfig } from '../lib/reg
  * ──────────────────────────────────────────────────────────────
  *
  * Env vars (per Vercel project):
- *   MAKE_WEBHOOK_URL    — required; shared across all sites (Make.com routes by provider + external_list_id)
+ *   RESPONDER_CLIENT_ID, RESPONDER_CLIENT_SECRET, RESPONDER_USER_TOKEN
+ *                       — Rav Messer V2 credentials; with them, layer 1 goes direct
+ *   MAKE_WEBHOOK_URL    — the backup (and the only path for a site without the credentials)
  *   CRM_LEAD_ENDPOINT   — https://crm.efitzur.co.il/api/lead-capture
  *   CRM_LEAD_TOKEN      — shared secret, sent as x-crm-token header
  *   RESEND_API_KEY      — only on sites that have any list with notify=true
@@ -112,15 +117,53 @@ function buildCrmPayload(data: Record<string, string>, list: MailingListConfig, 
   };
 }
 
-/**
- * Dispatch a lead to the list's mailing provider. Returns true on success.
- * Today all providers funnel through the single Make.com webhook, which does the
- * per-provider branching inside the scenario. Adding a direct-API path for a new
- * provider is a matter of adding a branch here.
- */
-async function dispatchToMailingProvider(list: MailingListConfig, data: Record<string, string>, page: string): Promise<boolean> {
+/** Layer 1 through the shared Make.com webhook. True when Make accepted the payload. */
+async function postToMake(list: MailingListConfig, data: Record<string, string>, page: string): Promise<boolean> {
   const webhookUrl = process.env.MAKE_WEBHOOK_URL;
   if (!webhookUrl) return false;
+  try {
+    const r = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildProviderPayload(data, list, page)),
+      signal: AbortSignal.timeout(10000),
+    });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Dispatch a lead to the list's mailing provider. Returns true on success.
+ *
+ * Rav Messer goes DIRECT when the site has the credentials (since 09.10.2026).
+ * If the direct call fails, the payload also goes to Make as the backup Elad
+ * asked to keep: even with its scenario switched off, Make queues what it
+ * receives, so the lead can be replayed later. The backup never counts as
+ * success. A 200 from Make is not delivery, which is exactly how six weeks of
+ * leads disappeared (inc_1791476692_89b7).
+ *
+ * A site without the credentials keeps the previous behaviour: Make only.
+ */
+async function dispatchToMailingProvider(list: MailingListConfig, data: Record<string, string>, page: string): Promise<boolean> {
+  if (list.provider === 'responder' && hasRavMesserCredentials() && isRegisteredList(list)) {
+    const direct = await addSubscriberDirect({
+      listId: list.external_list_id,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      fields: {
+        city: data.city, interested_in: data.interested_in,
+        utm_source: data.utm_source, utm_medium: data.utm_medium, utm_campaign: data.utm_campaign,
+        utm_term: data.utm_term, utm_content: data.utm_content, ref: data.ref,
+      },
+    });
+    if (direct.ok) return true;
+    const queued = await postToMake(list, data, page);
+    console.error(`[lead] RAV MESSER DIRECT FAILED site=${list.source_site} list=${list.external_list_id} reason=${direct.reason} make_backup=${queued ? 'queued' : 'unavailable'}`);
+    return false;
+  }
 
   switch (list.provider) {
     case 'responder':
@@ -128,17 +171,7 @@ async function dispatchToMailingProvider(list: MailingListConfig, data: Record<s
     case 'activetrail':
     case 'mailerlite':
       // Route via Make.com — the scenario branches on `provider`.
-      try {
-        const r = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(buildProviderPayload(data, list, page)),
-          signal: AbortSignal.timeout(10000),
-        });
-        return r.ok;
-      } catch {
-        return false;
-      }
+      return postToMake(list, data, page);
 
     default: {
       // Exhaustiveness guard — lights up if a new provider is added to the union but not handled here.

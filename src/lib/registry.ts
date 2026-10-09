@@ -136,6 +136,17 @@ export const MAILING_LISTS: Record<string, MailingListConfig> = {
 export const LISTS = MAILING_LISTS;
 
 /** Look up a mailing-list config. Returns a safe default for unknown IDs so the handler never crashes. */
+/**
+ * True when this list's provider id belongs to a list in the registry. The
+ * direct Rav Messer path uses an account-wide key that can write to EVERY list
+ * in the account, so it only ever writes to lists named here; anything else a
+ * caller types (a purchasers list, an internal list) is not subscribed
+ * directly (Codex review, 09.10.2026).
+ */
+export function isRegisteredList(list: MailingListConfig): boolean {
+  return Object.values(MAILING_LISTS).some((l) => String(l.external_list_id) === String(list.external_list_id));
+}
+
 export function resolveList(listId: string): MailingListConfig {
   return MAILING_LISTS[listId] || {
     name: `רשימה ${listId}`,
