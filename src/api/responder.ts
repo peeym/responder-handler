@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { resolveList, type MailingListConfig, type ListConfig } from '../lib/registry.js';
+import { resolveList, isRegisteredList, type MailingListConfig, type ListConfig } from '../lib/registry.js';
 import { addSubscriberDirect, hasRavMesserCredentials } from '../lib/ravmesser.js';
 
 /**
@@ -147,7 +147,7 @@ async function postToMake(list: MailingListConfig, data: Record<string, string>,
  * A site without the credentials keeps the previous behaviour: Make only.
  */
 async function dispatchToMailingProvider(list: MailingListConfig, data: Record<string, string>, page: string): Promise<boolean> {
-  if (list.provider === 'responder' && hasRavMesserCredentials()) {
+  if (list.provider === 'responder' && hasRavMesserCredentials() && isRegisteredList(list)) {
     const direct = await addSubscriberDirect({
       listId: list.external_list_id,
       name: data.name,
