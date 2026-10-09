@@ -1,0 +1,17 @@
+name: dist in sync
+# dist/ is committed on purpose: sites that install this package as a GitHub
+# tarball (codeload, no SSH on Vercel) get only committed files and never run
+# `prepare`. Without dist their lead endpoint crashes on import, which is how
+# scenario-insurance.co.il lost every form from 31.07 to 09.10.2026.
+# This job fails a PR whose dist/ does not match a fresh build of src/.
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci --ignore-scripts
+      - run: npx tsc
+      - run: git diff --exit-code -- dist || (echo "dist/ is stale. Run npx tsc and commit dist/." && exit 1)
