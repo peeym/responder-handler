@@ -82,6 +82,38 @@ export const MAILING_LISTS = {
     'efitzur-webinar-muvchanut': { name: 'וובינר מובחנות', provider: 'responder', external_list_id: '6618', source_site: 'efitzur', form_name: 'webinar-muvchanut', product_slug: 'efitzur-webinar-muvchanut', salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: false, crm_tags: ['efitzur', 'webinar'] },
     'efitzur-webinar-tikshoret': { name: 'וובינר תקשורת זוגית', provider: 'responder', external_list_id: '2889', source_site: 'efitzur', form_name: 'webinar-tikshoret', product_slug: 'efitzur-webinar-tikshoret', salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: false, crm_tags: ['efitzur', 'webinar'] },
     'efitzur-webinar-tkiut': { name: 'וובינר תקיעות בנישואין', provider: 'responder', external_list_id: '2625', source_site: 'efitzur', form_name: 'webinar-tkiut', product_slug: 'efitzur-webinar-tkiut', salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: false, crm_tags: ['efitzur', 'webinar'] },
+    // --- efitzur.co.il: forms that had no recorded list (2026-10-30) ---
+    //
+    // PROVENANCE: the old Elementor forms post through the WordPress Responder plugin, so the
+    // target list lives in the widget settings and not in the page HTML. Each id below was
+    // decided from Rav Messer join data read through the v2 API (who joined which list, and
+    // when, against each page's publish date and event date). The 2026-04-24 snapshot is NOT
+    // the source: it keyed lists by Elementor form_id, and form_id is a widget id that is
+    // copied when a page is duplicated (91aca18, a5ea5ed, ff57de4 and 7056994 each sit on
+    // pages that post to different lists).
+    //
+    // /webinar-men/ (forms 92c6ac8 + bfadaa3): page published 19.10.2026 15:10, and 93655 got
+    // its first joins since March on 19, 22 (x2) and 23 (x2) October. Same list as the
+    // merhav-man page, told apart by form_name.
+    'efitzur-webinar-men': { name: 'וובינר מרחב בטוח או קשוח לגברים (webinar-men)', provider: 'responder', external_list_id: '93655', source_site: 'efitzur', form_name: 'webinar-men', product_slug: 'efitzur-webinar-men', salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: false, crm_tags: ['efitzur', 'webinar'] },
+    // /courses/winston-5/ (form a5ea5ed): during the Winston 5 campaign (Oct-Nov 2025) 10092
+    // took 36 joins, and six of those people joined 77965 "וינסטון ה׳" (the buyers list)
+    // 2 to 8 minutes later: form, then checkout. Interest list, not the buyers list, per the
+    // convention above. 10151 (the snapshot's guess) took 3 joins in that window.
+    // /courses/muv-web-ligdol/ (form 91aca18): a duplicate of /courses/muvchanutweb/ (same
+    // template, same widget id, same hidden fields), and a duplicated Elementor page keeps the
+    // widget's Responder list, so it inherits 6618, the list Efrat verified for muvchanutweb.
+    // 79263 (the snapshot's guess) took 1 join since May 2026; 6618 took 90 in October.
+    'efitzur-webinar-muvchanut-ligdol': { name: 'וובינר מובחנות: לגדול כאישה וכבת זוג', provider: 'responder', external_list_id: '6618', source_site: 'efitzur', form_name: 'webinar-muvchanut-ligdol', product_slug: 'efitzur-webinar-muvchanut-ligdol', salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: false, crm_tags: ['efitzur', 'webinar'] },
+    // /libat/ (form 7056994, women): the form is "פגישת ייעוץ והכוונה עם אפרת", the same
+    // offer as /courses/consulting-course/, whose list 2662 Efrat verified. There is no
+    // women's Libat interest list in the account; Libat 8 buyers (100090 zoom, 100088
+    // frontal) are added with no form join in the 30 minutes before, on any of 135 lists,
+    // and 17 of the 55 had joined 2662 days or weeks earlier. Medium confidence: the
+    // Elementor setting itself was not read. /libat-for-men/ shares the widget id but posts
+    // to 84398, the existing efitzur-course-libat-gvarim entry.
+    'efitzur-course-libat': { name: 'ליבת הזוגיות: פגישת התאמה (נשים)', provider: 'responder', external_list_id: '2662', source_site: 'efitzur', form_name: 'course-libat', product_slug: 'efitzur-course-libat', salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: true, crm_tags: ['efitzur', 'course'] },
+    'efitzur-course-winston': { name: 'סופרוויז׳ן דניאל וינסטון: מתעניינות', provider: 'responder', external_list_id: '10092', source_site: 'efitzur', form_name: 'course-winston', product_slug: 'efitzur-course-winston', salesperson: 'efrat', notify_email: 'efrat@efitzur.co.il', notify: true, crm_tags: ['efitzur', 'course'] },
     // --- storm-eye.co.il (Phase 3) ---
     'stormeye-general': { name: 'לידים עין הסערה (רשימה ארצית)', provider: 'responder', external_list_id: '79220', source_site: 'stormeye', form_name: 'storm-eye-lead', product_slug: 'storm-eye-workshop', salesperson: 'tzur', notify_email: 'tzur@icf.co.il', notify: true, crm_tags: ['lead', 'stormeye'] },
     'stormeye-exposure': { name: 'ערבי חשיפה עין הסערה', provider: 'responder', external_list_id: '87346', source_site: 'stormeye', form_name: 'exposure-evening', product_slug: 'storm-eye-exposure-evening', salesperson: 'tzur', notify_email: 'tzur@icf.co.il', notify: true, crm_tags: ['event-registration', 'exposure', 'stormeye'] },
