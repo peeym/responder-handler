@@ -35,7 +35,7 @@ export interface ResponderHandlerOptions {
   emailFrom?: string;
 }
 
-// Simple in-memory rate limit (1 submission / 10s / IP). Resets on cold start — good enough for serverless.
+// Simple in-memory rate limit (1 submission / 10s / IP + contact). Resets on cold start — good enough for serverless.
 const rateLimitMap = new Map<string, number>();
 
 function buildCorsOrigin(req: VercelRequest, allowed: string[]): string {
@@ -325,10 +325,16 @@ export function createResponderHandler(options: ResponderHandlerOptions = {}) {
       return res.json({ ok: false, error: 'כתובת אימייל לא תקינה' });
     }
 
-    const ip = (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0] || 'unknown';
-    const last = rateLimitMap.get(ip) || 0;
-    if (Date.now() - last < 10000) return res.json({ ok: false, error: 'נסו שוב בעוד כמה שניות' });
-    rateLimitMap.set(ip, Date.now());
+    const ip = (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() || 'unknown';
+    const contact = (data.email || data.phone).toLowerCase();
+    const throttleKey = `${ip}|${contact}`;
+    const now = Date.now();
+    if (rateLimitMap.size > 5000) {
+      for (const [k, t] of rateLimitMap) if (now - t >= 10000) rateLimitMap.delete(k);
+    }
+    const last = rateLimitMap.get(throttleKey) || 0;
+    if (now - last < 10000) return res.json({ ok: false, error: 'נסו שוב בעוד כמה שניות' });
+    rateLimitMap.set(throttleKey, now);
 
     const list = resolveList(listId);
 
@@ -420,3 +426,5 @@ async function sendNotifyEmail(args: {
     return false;
   }
 }
+
+export const __test = { resetRateLimit: () => rateLimitMap.clear() };

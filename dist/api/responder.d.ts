@@ -81,4 +81,7 @@ export interface DispatchLeadResult {
 }
 export declare function dispatchLead(input: DispatchLeadInput, options?: DispatchLeadOptions): Promise<DispatchLeadResult>;
 export declare function createResponderHandler(options?: ResponderHandlerOptions): (req: VercelRequest, res: VercelResponse) => Promise<VercelResponse>;
+export declare const __test: {
+    resetRateLimit: () => void;
+};
 //# sourceMappingURL=responder.d.ts.map
