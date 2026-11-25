@@ -1,6 +1,6 @@
 import { resolveList, isRegisteredList } from '../lib/registry.js';
 import { addSubscriberDirect, hasRavMesserCredentials } from '../lib/ravmesser.js';
-// Simple in-memory rate limit (1 submission / 10s / IP). Resets on cold start — good enough for serverless.
+// Simple in-memory rate limit (1 submission / 10s / IP + contact). Resets on cold start — good enough for serverless.
 const rateLimitMap = new Map();
 function buildCorsOrigin(req, allowed) {
     const origin = req.headers.origin || '';
@@ -221,11 +221,19 @@ export function createResponderHandler(options = {}) {
         if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
             return res.json({ ok: false, error: 'כתובת אימייל לא תקינה' });
         }
-        const ip = req.headers['x-forwarded-for']?.split(',')[0] || 'unknown';
-        const last = rateLimitMap.get(ip) || 0;
-        if (Date.now() - last < 10000)
+        const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 'unknown';
+        const contact = (data.email || data.phone).toLowerCase();
+        const throttleKey = `${ip}|${contact}`;
+        const now = Date.now();
+        if (rateLimitMap.size > 5000) {
+            for (const [k, t] of rateLimitMap)
+                if (now - t >= 10000)
+                    rateLimitMap.delete(k);
+        }
+        const last = rateLimitMap.get(throttleKey) || 0;
+        if (now - last < 10000)
             return res.json({ ok: false, error: 'נסו שוב בעוד כמה שניות' });
-        rateLimitMap.set(ip, Date.now());
+        rateLimitMap.set(throttleKey, now);
         const list = resolveList(listId);
         // --- Kick off all 3 layers in parallel, wait for all to settle ---
         const crmUrl = process.env.CRM_LEAD_ENDPOINT || 'https://crm.efitzur.co.il/api/lead-capture';
@@ -301,4 +309,5 @@ async function sendNotifyEmail(args) {
         return false;
     }
 }
+export const __test = { resetRateLimit: () => rateLimitMap.clear() };
 //# sourceMappingURL=responder.js.map
