@@ -38,6 +38,13 @@ export interface ResponderHandlerOptions {
     notifyTo?: string[];
     /** Copy list used together with `notifyTo`. Ignored when `notifyTo` is empty. */
     notifyCc?: string[];
+    /**
+     * Per-request opt-out of layer 1. Return true to record the lead in the CRM and send the
+     * notification email WITHOUT subscribing the person to the mailing list: an inquiry whose
+     * marketing-consent box was left unticked (Communications Law s. 30A needs prior express
+     * consent for advertising). Unset = every lead is subscribed, as before.
+     */
+    skipMailing?: (data: Record<string, string>) => boolean;
 }
 /**
  * Framework-agnostic lead dispatcher.
@@ -83,12 +90,16 @@ export interface DispatchLeadOptions {
     notifyCc?: string[];
     /** Origin to forward to the CRM (so its CORS gate sees the real site). */
     originForCrm?: string;
+    /** Skip layer 1 (no mailing-list subscription); CRM and notification run as usual. */
+    skipMailing?: boolean;
 }
 export interface DispatchLeadResult {
     ok: boolean;
     mailing: boolean;
     crm: boolean;
     email: boolean;
+    /** True when layer 1 was skipped on purpose (`skipMailing`), so `mailing: false` is not a failure. */
+    mailingSkipped?: boolean;
     /** Hebrew error string for known input-validation failures. */
     validationError?: string;
 }
