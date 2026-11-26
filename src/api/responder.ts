@@ -42,6 +42,13 @@ export interface ResponderHandlerOptions {
   notifyTo?: string[];
   /** Copy list used together with `notifyTo`. Ignored when `notifyTo` is empty. */
   notifyCc?: string[];
+  /**
+   * Per-request opt-out of layer 1. Return true to record the lead in the CRM and send the
+   * notification email WITHOUT subscribing the person to the mailing list: an inquiry whose
+   * marketing-consent box was left unticked (Communications Law s. 30A needs prior express
+   * consent for advertising). Unset = every lead is subscribed, as before.
+   */
+  skipMailing?: (data: Record<string, string>) => boolean;
 }
 
 // Simple in-memory rate limit (1 submission / 10s / IP). Resets on cold start — good enough for serverless.
@@ -236,6 +243,8 @@ export interface DispatchLeadOptions {
   notifyCc?: string[];
   /** Origin to forward to the CRM (so its CORS gate sees the real site). */
   originForCrm?: string;
+  /** Skip layer 1 (no mailing-list subscription); CRM and notification run as usual. */
+  skipMailing?: boolean;
 }
 
 export interface DispatchLeadResult {
@@ -243,6 +252,8 @@ export interface DispatchLeadResult {
   mailing: boolean;
   crm: boolean;
   email: boolean;
+  /** True when layer 1 was skipped on purpose (`skipMailing`), so `mailing: false` is not a failure. */
+  mailingSkipped?: boolean;
   /** Hebrew error string for known input-validation failures. */
   validationError?: string;
 }
@@ -274,7 +285,8 @@ export async function dispatchLead(
   const crmToken = process.env.CRM_LEAD_TOKEN;
   const corsOrigin = options.originForCrm || page;
 
-  const layer1 = dispatchToMailingProvider(list, data, page);
+  const skipMailing = options.skipMailing === true;
+  const layer1 = skipMailing ? Promise.resolve(false) : dispatchToMailingProvider(list, data, page);
 
   const layer2 = fetch(crmUrl, {
     method: 'POST',
@@ -300,13 +312,14 @@ export async function dispatchLead(
 
   const [mailingOk, crmOk, emailOk] = await Promise.all([layer1, layer2, layer3]);
 
-  console.log(`[lead] site=${list.source_site} list=${input.list_id} provider=${list.provider} external_id=${list.external_list_id} (${list.name}) email=${data.email || '—'} phone=${data.phone || '—'} mailing=${mailingOk} crm=${crmOk} email=${emailOk}`);
+  console.log(`[lead] site=${list.source_site} list=${input.list_id} provider=${list.provider} external_id=${list.external_list_id} (${list.name}) email=${data.email || '—'} phone=${data.phone || '—'} mailing=${skipMailing ? 'skipped' : mailingOk} crm=${crmOk} email=${emailOk}`);
 
   return {
     ok: mailingOk || crmOk || emailOk,
     mailing: mailingOk,
     crm: crmOk,
     email: emailOk,
+    ...(skipMailing ? { mailingSkipped: true } : {}),
   };
 }
 
@@ -349,7 +362,8 @@ export function createResponderHandler(options: ResponderHandlerOptions = {}) {
     const crmUrl = process.env.CRM_LEAD_ENDPOINT || 'https://crm.efitzur.co.il/api/lead-capture';
     const crmToken = process.env.CRM_LEAD_TOKEN;
 
-    const layer1 = dispatchToMailingProvider(list, data, page);
+    const skipMailing = options.skipMailing ? options.skipMailing(data) === true : false;
+    const layer1 = skipMailing ? Promise.resolve(false) : dispatchToMailingProvider(list, data, page);
 
     const layer2 = fetch(crmUrl, {
       method: 'POST',
@@ -376,12 +390,12 @@ export function createResponderHandler(options: ResponderHandlerOptions = {}) {
 
     const [mailingOk, crmOk, emailOk] = await Promise.all([layer1, layer2, layer3]);
 
-    console.log(`[lead] site=${list.source_site} list=${listId} provider=${list.provider} external_id=${list.external_list_id} (${list.name}) email=${data.email || '—'} phone=${data.phone || '—'} mailing=${mailingOk} crm=${crmOk} email=${emailOk}`);
+    console.log(`[lead] site=${list.source_site} list=${listId} provider=${list.provider} external_id=${list.external_list_id} (${list.name}) email=${data.email || '—'} phone=${data.phone || '—'} mailing=${skipMailing ? 'skipped' : mailingOk} crm=${crmOk} email=${emailOk}`);
 
     // UX = success unless ALL three layers failed.
     const ok = mailingOk || crmOk || emailOk;
     // Response keeps `responder` key as alias for `mailing` to avoid breaking existing client code.
-    return res.json({ ok, mailing: mailingOk, responder: mailingOk, crm: crmOk, email: emailOk });
+    return res.json({ ok, mailing: mailingOk, responder: mailingOk, crm: crmOk, email: emailOk, ...(skipMailing ? { mailing_skipped: true } : {}) });
   };
 }
 

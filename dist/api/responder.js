@@ -166,7 +166,8 @@ export async function dispatchLead(input, options = {}) {
     const crmUrl = process.env.CRM_LEAD_ENDPOINT || 'https://crm.efitzur.co.il/api/lead-capture';
     const crmToken = process.env.CRM_LEAD_TOKEN;
     const corsOrigin = options.originForCrm || page;
-    const layer1 = dispatchToMailingProvider(list, data, page);
+    const skipMailing = options.skipMailing === true;
+    const layer1 = skipMailing ? Promise.resolve(false) : dispatchToMailingProvider(list, data, page);
     const layer2 = fetch(crmUrl, {
         method: 'POST',
         headers: {
@@ -188,12 +189,13 @@ export async function dispatchLead(input, options = {}) {
         })
         : Promise.resolve(false);
     const [mailingOk, crmOk, emailOk] = await Promise.all([layer1, layer2, layer3]);
-    console.log(`[lead] site=${list.source_site} list=${input.list_id} provider=${list.provider} external_id=${list.external_list_id} (${list.name}) email=${data.email || '—'} phone=${data.phone || '—'} mailing=${mailingOk} crm=${crmOk} email=${emailOk}`);
+    console.log(`[lead] site=${list.source_site} list=${input.list_id} provider=${list.provider} external_id=${list.external_list_id} (${list.name}) email=${data.email || '—'} phone=${data.phone || '—'} mailing=${skipMailing ? 'skipped' : mailingOk} crm=${crmOk} email=${emailOk}`);
     return {
         ok: mailingOk || crmOk || emailOk,
         mailing: mailingOk,
         crm: crmOk,
         email: emailOk,
+        ...(skipMailing ? { mailingSkipped: true } : {}),
     };
 }
 export function createResponderHandler(options = {}) {
@@ -230,7 +232,8 @@ export function createResponderHandler(options = {}) {
         // --- Kick off all 3 layers in parallel, wait for all to settle ---
         const crmUrl = process.env.CRM_LEAD_ENDPOINT || 'https://crm.efitzur.co.il/api/lead-capture';
         const crmToken = process.env.CRM_LEAD_TOKEN;
-        const layer1 = dispatchToMailingProvider(list, data, page);
+        const skipMailing = options.skipMailing ? options.skipMailing(data) === true : false;
+        const layer1 = skipMailing ? Promise.resolve(false) : dispatchToMailingProvider(list, data, page);
         const layer2 = fetch(crmUrl, {
             method: 'POST',
             headers: {
@@ -253,11 +256,11 @@ export function createResponderHandler(options = {}) {
             })
             : Promise.resolve(false);
         const [mailingOk, crmOk, emailOk] = await Promise.all([layer1, layer2, layer3]);
-        console.log(`[lead] site=${list.source_site} list=${listId} provider=${list.provider} external_id=${list.external_list_id} (${list.name}) email=${data.email || '—'} phone=${data.phone || '—'} mailing=${mailingOk} crm=${crmOk} email=${emailOk}`);
+        console.log(`[lead] site=${list.source_site} list=${listId} provider=${list.provider} external_id=${list.external_list_id} (${list.name}) email=${data.email || '—'} phone=${data.phone || '—'} mailing=${skipMailing ? 'skipped' : mailingOk} crm=${crmOk} email=${emailOk}`);
         // UX = success unless ALL three layers failed.
         const ok = mailingOk || crmOk || emailOk;
         // Response keeps `responder` key as alias for `mailing` to avoid breaking existing client code.
-        return res.json({ ok, mailing: mailingOk, responder: mailingOk, crm: crmOk, email: emailOk });
+        return res.json({ ok, mailing: mailingOk, responder: mailingOk, crm: crmOk, email: emailOk, ...(skipMailing ? { mailing_skipped: true } : {}) });
     };
 }
 const ICF_COPY = 'tzur@icf.co.il';
