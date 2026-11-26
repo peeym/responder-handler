@@ -29,6 +29,15 @@ export interface ResponderHandlerOptions {
     allowedOrigins?: string[];
     /** Override `from` address on the Resend email. Defaults to site-neutral. */
     emailFrom?: string;
+    /**
+     * Replace the notification recipients for EVERY list on this site. When set (non-empty), the
+     * list's `notify_email` and the built-in tzur@icf.co.il copy are both dropped: the email goes
+     * to these addresses only, plus `notifyCc`. Lets a site route notifications by configuration
+     * (an env var) instead of editing the shared registry. Unset = the registry behaviour.
+     */
+    notifyTo?: string[];
+    /** Copy list used together with `notifyTo`. Ignored when `notifyTo` is empty. */
+    notifyCc?: string[];
 }
 /**
  * Framework-agnostic lead dispatcher.
@@ -68,6 +77,10 @@ export interface DispatchLeadInput {
 export interface DispatchLeadOptions {
     /** Override the From: address on the Resend notification email. */
     emailFrom?: string;
+    /** See ResponderHandlerOptions.notifyTo. */
+    notifyTo?: string[];
+    /** See ResponderHandlerOptions.notifyCc. */
+    notifyCc?: string[];
     /** Origin to forward to the CRM (so its CORS gate sees the real site). */
     originForCrm?: string;
 }
@@ -81,4 +94,15 @@ export interface DispatchLeadResult {
 }
 export declare function dispatchLead(input: DispatchLeadInput, options?: DispatchLeadOptions): Promise<DispatchLeadResult>;
 export declare function createResponderHandler(options?: ResponderHandlerOptions): (req: VercelRequest, res: VercelResponse) => Promise<VercelResponse>;
+/**
+ * Who gets the notification. Default (no override): the list's notify_email, with tzur@icf.co.il
+ * copied unless it is already the recipient. With `notifyTo`: exactly notifyTo + notifyCc.
+ */
+export declare function notifyRecipients(listEmail: string, options?: {
+    notifyTo?: string[];
+    notifyCc?: string[];
+}): {
+    to: string[];
+    cc: string[] | undefined;
+};
 //# sourceMappingURL=responder.d.ts.map

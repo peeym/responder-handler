@@ -181,7 +181,7 @@ export async function dispatchLead(input, options = {}) {
         ? sendNotifyEmail({
             apiKey: process.env.RESEND_API_KEY,
             from: options.emailFrom || 'Website <noreply@efitzur.co.il>',
-            to: list.notify_email,
+            ...notifyRecipients(list.notify_email, options),
             list,
             data,
             page,
@@ -246,7 +246,7 @@ export function createResponderHandler(options = {}) {
             ? sendNotifyEmail({
                 apiKey: process.env.RESEND_API_KEY,
                 from: options.emailFrom || 'Website <noreply@efitzur.co.il>',
-                to: list.notify_email,
+                ...notifyRecipients(list.notify_email, options),
                 list,
                 data,
                 page,
@@ -260,8 +260,23 @@ export function createResponderHandler(options = {}) {
         return res.json({ ok, mailing: mailingOk, responder: mailingOk, crm: crmOk, email: emailOk });
     };
 }
+const ICF_COPY = 'tzur@icf.co.il';
+/**
+ * Who gets the notification. Default (no override): the list's notify_email, with tzur@icf.co.il
+ * copied unless it is already the recipient. With `notifyTo`: exactly notifyTo + notifyCc.
+ */
+export function notifyRecipients(listEmail, options = {}) {
+    const clean = (xs) => (xs ?? []).map((x) => x.trim()).filter((x) => /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(x));
+    const to = clean(options.notifyTo);
+    if (to.length) {
+        const lower = new Set(to.map((x) => x.toLowerCase()));
+        const cc = clean(options.notifyCc).filter((x) => !lower.has(x.toLowerCase()));
+        return { to, cc: cc.length ? cc : undefined };
+    }
+    return { to: [listEmail], cc: listEmail !== ICF_COPY ? [ICF_COPY] : undefined };
+}
 async function sendNotifyEmail(args) {
-    const { apiKey, from, to, list, data, page } = args;
+    const { apiKey, from, to, cc, list, data, page } = args;
     const subject = `${list.source_site.toUpperCase()} — פנייה חדשה: ${list.name}`;
     const body = [
         'פנייה חדשה מהאתר',
@@ -287,8 +302,8 @@ async function sendNotifyEmail(args) {
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
             body: JSON.stringify({
                 from,
-                to: [to],
-                cc: to !== 'tzur@icf.co.il' ? ['tzur@icf.co.il'] : undefined,
+                to,
+                cc,
                 reply_to: data.email || undefined,
                 subject,
                 text: body,

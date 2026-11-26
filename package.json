@@ -31,7 +31,7 @@
   "scripts": {
     "build": "tsc",
     "prepare": "tsc",
-    "test": "echo \"no tests yet\" && exit 0"
+    "test": "node --test test/*.test.mjs"
   },
   "repository": {
     "type": "git",

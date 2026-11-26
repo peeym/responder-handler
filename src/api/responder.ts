@@ -33,6 +33,15 @@ export interface ResponderHandlerOptions {
   allowedOrigins?: string[];
   /** Override `from` address on the Resend email. Defaults to site-neutral. */
   emailFrom?: string;
+  /**
+   * Replace the notification recipients for EVERY list on this site. When set (non-empty), the
+   * list's `notify_email` and the built-in tzur@icf.co.il copy are both dropped: the email goes
+   * to these addresses only, plus `notifyCc`. Lets a site route notifications by configuration
+   * (an env var) instead of editing the shared registry. Unset = the registry behaviour.
+   */
+  notifyTo?: string[];
+  /** Copy list used together with `notifyTo`. Ignored when `notifyTo` is empty. */
+  notifyCc?: string[];
 }
 
 // Simple in-memory rate limit (1 submission / 10s / IP). Resets on cold start — good enough for serverless.
@@ -221,6 +230,10 @@ export interface DispatchLeadInput {
 export interface DispatchLeadOptions {
   /** Override the From: address on the Resend notification email. */
   emailFrom?: string;
+  /** See ResponderHandlerOptions.notifyTo. */
+  notifyTo?: string[];
+  /** See ResponderHandlerOptions.notifyCc. */
+  notifyCc?: string[];
   /** Origin to forward to the CRM (so its CORS gate sees the real site). */
   originForCrm?: string;
 }
@@ -278,7 +291,7 @@ export async function dispatchLead(
     ? sendNotifyEmail({
         apiKey: process.env.RESEND_API_KEY,
         from: options.emailFrom || 'Website <noreply@efitzur.co.il>',
-        to: list.notify_email,
+        ...notifyRecipients(list.notify_email, options),
         list,
         data,
         page,
@@ -354,7 +367,7 @@ export function createResponderHandler(options: ResponderHandlerOptions = {}) {
       ? sendNotifyEmail({
           apiKey: process.env.RESEND_API_KEY,
           from: options.emailFrom || 'Website <noreply@efitzur.co.il>',
-          to: list.notify_email,
+          ...notifyRecipients(list.notify_email, options),
           list,
           data,
           page,
@@ -372,15 +385,36 @@ export function createResponderHandler(options: ResponderHandlerOptions = {}) {
   };
 }
 
+const ICF_COPY = 'tzur@icf.co.il';
+
+/**
+ * Who gets the notification. Default (no override): the list's notify_email, with tzur@icf.co.il
+ * copied unless it is already the recipient. With `notifyTo`: exactly notifyTo + notifyCc.
+ */
+export function notifyRecipients(
+  listEmail: string,
+  options: { notifyTo?: string[]; notifyCc?: string[] } = {},
+): { to: string[]; cc: string[] | undefined } {
+  const clean = (xs?: string[]) => (xs ?? []).map((x) => x.trim()).filter((x) => /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(x));
+  const to = clean(options.notifyTo);
+  if (to.length) {
+    const lower = new Set(to.map((x) => x.toLowerCase()));
+    const cc = clean(options.notifyCc).filter((x) => !lower.has(x.toLowerCase()));
+    return { to, cc: cc.length ? cc : undefined };
+  }
+  return { to: [listEmail], cc: listEmail !== ICF_COPY ? [ICF_COPY] : undefined };
+}
+
 async function sendNotifyEmail(args: {
   apiKey: string;
   from: string;
-  to: string;
+  to: string[];
+  cc: string[] | undefined;
   list: ListConfig;
   data: Record<string, string>;
   page: string;
 }): Promise<boolean> {
-  const { apiKey, from, to, list, data, page } = args;
+  const { apiKey, from, to, cc, list, data, page } = args;
   const subject = `${list.source_site.toUpperCase()} — פנייה חדשה: ${list.name}`;
   const body = [
     'פנייה חדשה מהאתר',
@@ -407,8 +441,8 @@ async function sendNotifyEmail(args: {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         from,
-        to: [to],
-        cc: to !== 'tzur@icf.co.il' ? ['tzur@icf.co.il'] : undefined,
+        to,
+        cc,
         reply_to: data.email || undefined,
         subject,
         text: body,
